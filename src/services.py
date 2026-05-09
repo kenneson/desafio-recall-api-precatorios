@@ -9,13 +9,22 @@ from sqlalchemy import Select, select
 from sqlalchemy.orm import Session
 
 from src.database import BASE_DIR
-from src.document_parser import ParsedDocument, ParsedEvent, parse_document_text
-from src.domain import PRECATORIO_PATTERN, StatusPrecatorio, TaskAction, TaskStatus, task_rule_for_status
+from src.document_extraction import ExtractionResult, extract_document_text
+from src.document_parser import ParsedDocument, ParsedEvent
+from src.domain import (
+    COLETA_PRECATORIO_FULL_PATTERN,
+    PRECATORIO_PATTERN,
+    StatusPrecatorio,
+    TaskAction,
+    TaskStatus,
+    task_rule_for_status,
+)
 from src.models import ColetaPrecatorio, FilaTask, Precatorio, TimelineEvent
 
 DOCUMENTS_DIR = BASE_DIR / "documentos"
 RPA_SOURCE_URL = "https://www.tjpr.jus.br/precatorios-em-ordem-cronologica-de-pagamento"
 PRECATORIO_RE = re.compile(rf"^{PRECATORIO_PATTERN}$")
+COLETA_PRECATORIO_RE = re.compile(COLETA_PRECATORIO_FULL_PATTERN)
 
 
 class DomainError(Exception):
@@ -47,14 +56,21 @@ def validate_precatorio_numero(numero: str) -> str:
     return numero
 
 
+def validate_coleta_precatorio_numero(numero: str) -> str:
+    if not COLETA_PRECATORIO_RE.fullmatch(numero):
+        raise InvalidPrecatorioNumber("Numero coletado de precatorio invalido.")
+    return numero
+
+
 def process_precatorio(numero: str, db: Session) -> ProcessamentoResult:
     numero = validate_precatorio_numero(numero)
     document_path = resolve_document_path(numero)
-    parsed = parse_document_text(document_path.read_text(encoding="utf-8"), fallback_numero=numero)
+    extraction = extract_document_text(document_path.read_text(encoding="utf-8"), fallback_numero=numero)
+    parsed = extraction.document
     if parsed.numero != numero:
         raise InvalidPrecatorioNumber("Documento localizado pertence a outro precatorio.")
 
-    precatorio = upsert_precatorio(parsed, db)
+    precatorio = upsert_precatorio(parsed, db, extraction)
     tarefa = enqueue_task_for_status(numero, parsed.status, db)
     eventos_criados = create_timeline_events(numero, parsed.eventos, "documento", db)
     eventos_criados += create_timeline_events(
@@ -82,6 +98,7 @@ def resolve_document_path(numero: str) -> Path:
     numero = validate_precatorio_numero(numero)
     documents_root = DOCUMENTS_DIR.resolve()
     path = (DOCUMENTS_DIR / f"{numero}.txt").resolve()
+    # Evita path traversal mesmo se a validacao da rota mudar no futuro.
     if path.parent != documents_root:
         raise InvalidPrecatorioNumber("Caminho de documento invalido.")
     if not path.exists():
@@ -89,7 +106,7 @@ def resolve_document_path(numero: str) -> Path:
     return path
 
 
-def upsert_precatorio(parsed: ParsedDocument, db: Session) -> Precatorio:
+def upsert_precatorio(parsed: ParsedDocument, db: Session, extraction: ExtractionResult | None = None) -> Precatorio:
     precatorio = db.execute(select(Precatorio).where(Precatorio.numero == parsed.numero)).scalar_one_or_none()
     if not precatorio:
         precatorio = Precatorio(numero=parsed.numero, status=parsed.status.value, status_motivo=parsed.status_motivo, documento_hash=parsed.documento_hash)
@@ -106,6 +123,11 @@ def upsert_precatorio(parsed: ParsedDocument, db: Session) -> Precatorio:
     precatorio.status = parsed.status.value
     precatorio.status_motivo = parsed.status_motivo
     precatorio.documento_hash = parsed.documento_hash
+    if extraction:
+        precatorio.extraction_method = extraction.method
+        precatorio.extraction_confidence = extraction.confidence
+        precatorio.extraction_warnings = extraction.warnings
+        precatorio.llm_recommended = extraction.llm_recommended
     db.flush()
     return precatorio
 
@@ -220,7 +242,7 @@ def queue_query(status: TaskStatus | None = TaskStatus.PENDENTE) -> Select[tuple
 def persist_collected_numbers(numbers: list[str], db: Session, source: str = RPA_SOURCE_URL) -> list[ColetaPrecatorio]:
     rows: list[ColetaPrecatorio] = []
     for index, numero in enumerate(numbers, start=1):
-        validate_precatorio_numero(numero)
+        validate_coleta_precatorio_numero(numero)
         row = db.execute(select(ColetaPrecatorio).where(ColetaPrecatorio.numero == numero)).scalar_one_or_none()
         if not row:
             row = ColetaPrecatorio(numero=numero, ordem=index, origem=source)
@@ -247,4 +269,3 @@ def _timeline_event_exists(numero: str, event: ParsedEvent, origem: str, db: Ses
     else:
         query = query.where(TimelineEvent.data_evento == event.data_evento)
     return db.execute(query).first() is not None
-
