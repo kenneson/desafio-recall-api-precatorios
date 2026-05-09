@@ -5,6 +5,9 @@ from enum import Enum
 
 PRECATORIO_PATTERN = r"\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}"
 PRECATORIO_FULL_PATTERN = rf"^{PRECATORIO_PATTERN}$"
+OFICIO_PRECATORIO_PATTERN = r"\d{4}/\d{6}"
+COLETA_PRECATORIO_PATTERN = rf"(?:{PRECATORIO_PATTERN}|{OFICIO_PRECATORIO_PATTERN})"
+COLETA_PRECATORIO_FULL_PATTERN = rf"^{COLETA_PRECATORIO_PATTERN}$"
 
 
 class StatusPrecatorio(str, Enum):
@@ -12,6 +15,7 @@ class StatusPrecatorio(str, Enum):
     SUSPENSO = "SUSPENSO"
     PAGO = "PAGO"
     CANCELADO = "CANCELADO"
+    REVISAO_NECESSARIA = "REVISAO_NECESSARIA"
 
 
 class TaskStatus(str, Enum):
@@ -25,27 +29,33 @@ class TaskAction(str, Enum):
     ACOMPANHAR_SUSPENSAO = "ACOMPANHAR_SUSPENSAO"
     CONCILIAR_PAGAMENTO = "CONCILIAR_PAGAMENTO"
     AUDITAR_CANCELAMENTO = "AUDITAR_CANCELAMENTO"
+    REVISAR_CLASSIFICACAO = "REVISAR_CLASSIFICACAO"
 
 
 TASK_RULES: dict[StatusPrecatorio, tuple[TaskAction, int, str]] = {
+    StatusPrecatorio.REVISAO_NECESSARIA: (
+        TaskAction.REVISAR_CLASSIFICACAO,
+        1,
+        "Documento possui ambiguidade critica e deve ser revisado antes da decisao operacional.",
+    ),
     StatusPrecatorio.SUSPENSO: (
         TaskAction.ACOMPANHAR_SUSPENSAO,
-        1,
+        2,
         "Status impede pagamento e exige acompanhamento ativo.",
     ),
     StatusPrecatorio.AGUARDANDO_PAGAMENTO: (
         TaskAction.MONITORAR_PAGAMENTO,
-        2,
+        3,
         "Precatorio esta apto para monitoramento de fila e orcamento.",
     ),
     StatusPrecatorio.CANCELADO: (
         TaskAction.AUDITAR_CANCELAMENTO,
-        3,
+        4,
         "Cancelamento deve ser auditado antes de encerramento operacional.",
     ),
     StatusPrecatorio.PAGO: (
         TaskAction.CONCILIAR_PAGAMENTO,
-        4,
+        5,
         "Pagamento identificado deve ser conciliado e baixado.",
     ),
 }
