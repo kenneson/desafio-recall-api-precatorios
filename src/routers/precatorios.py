@@ -20,7 +20,17 @@ from src.services import (
 router = APIRouter(prefix="/precatorios", tags=["precatorios"])
 
 
-@router.post("/{numero}/processar", response_model=ProcessamentoResponse)
+@router.post(
+    "/{numero}/processar",
+    response_model=ProcessamentoResponse,
+    summary="Processar documento do precatório",
+    description=(
+        "Localiza o arquivo texto correspondente ao número informado em /documentos, "
+        "extrai os campos estruturados, classifica o status, salva o precatório, "
+        "cria a tarefa de fila coerente com a taxonomia e registra eventos na linha "
+        "do tempo."
+    ),
+)
 def processar_precatorio(numero: str = Path(pattern=PRECATORIO_FULL_PATTERN), db: Session = Depends(get_db)) -> ProcessamentoResponse:
     try:
         result = process_precatorio(numero, db)
@@ -31,7 +41,15 @@ def processar_precatorio(numero: str = Path(pattern=PRECATORIO_FULL_PATTERN), db
     return ProcessamentoResponse(precatorio=result.precatorio, tarefa=result.tarefa, eventos_criados=result.eventos_criados)
 
 
-@router.get("/{numero}", response_model=PrecatorioRead)
+@router.get(
+    "/{numero}",
+    response_model=PrecatorioRead,
+    summary="Consultar precatório processado",
+    description=(
+        "Retorna os dados estruturados já persistidos para um precatório. "
+        "Use este endpoint após o processamento do documento correspondente."
+    ),
+)
 def obter_precatorio(numero: str = Path(pattern=PRECATORIO_FULL_PATTERN), db: Session = Depends(get_db)) -> PrecatorioRead:
     try:
         return get_precatorio_or_404(numero, db)
@@ -39,12 +57,30 @@ def obter_precatorio(numero: str = Path(pattern=PRECATORIO_FULL_PATTERN), db: Se
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.get("/{numero}/timeline", response_model=list[TimelineEventRead])
+@router.get(
+    "/{numero}/timeline",
+    response_model=list[TimelineEventRead],
+    summary="Consultar linha do tempo",
+    description=(
+        "Lista, em ordem cronológica, os eventos extraídos do documento e os eventos "
+        "registrados posteriormente pela API."
+    ),
+)
 def listar_timeline(numero: str = Path(pattern=PRECATORIO_FULL_PATTERN), db: Session = Depends(get_db)) -> list[TimelineEventRead]:
     return list(db.execute(timeline_query(numero)).scalars().all())
 
 
-@router.post("/{numero}/eventos", response_model=TimelineEventRead, status_code=201)
+@router.post(
+    "/{numero}/eventos",
+    response_model=TimelineEventRead,
+    status_code=201,
+    summary="Registrar evento manual",
+    description=(
+        "Adiciona um evento informado pela API à linha do tempo do precatório. "
+        "Serve para registrar atualizações posteriores ao documento original, como "
+        "contato com cartório, nova certidão ou revisão operacional."
+    ),
+)
 def criar_evento_timeline(
     payload: TimelineEventCreate,
     numero: str = Path(pattern=PRECATORIO_FULL_PATTERN),
