@@ -22,6 +22,10 @@ class PrecatorioRead(BaseModel):
     status: StatusPrecatorio
     status_motivo: str
     documento_hash: str
+    extraction_method: str
+    extraction_confidence: float
+    extraction_warnings: list[str]
+    llm_recommended: bool
     created_at: datetime
     updated_at: datetime
 
