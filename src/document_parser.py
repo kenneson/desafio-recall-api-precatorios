@@ -58,7 +58,7 @@ class ParsedDocument:
 
 
 def parse_document_text(text: str, fallback_numero: str | None = None) -> ParsedDocument:
-    numero = _find_precatorio_number(text) or fallback_numero
+    numero = _find_precatorio_number(text, fallback_numero=fallback_numero) or fallback_numero
     if not numero:
         raise ValueError("Numero do precatorio nao encontrado no documento.")
 
@@ -71,7 +71,7 @@ def parse_document_text(text: str, fallback_numero: str | None = None) -> Parsed
         processo_originario=_extract_processo_originario(text),
         natureza=_extract_natureza(text),
         valor_centavos=_extract_money(text),
-        posicao_fila=_extract_int_after(text, r"posicao\s+na\s+fila\s*:\s*(\d+)"),
+        posicao_fila=_extract_int_after(text, r"posicao(?:\s+estimada)?\s+na\s+fila\s*:\s*(\d+)"),
         previsao_orcamentaria=_extract_int_after(text, r"(?:orcamento\s+previsto|previsao\s+orc)\s*:\s*(\d{4})"),
         status=status,
         status_motivo=status_motivo,
@@ -80,7 +80,25 @@ def parse_document_text(text: str, fallback_numero: str | None = None) -> Parsed
     )
 
 
-def _find_precatorio_number(text: str) -> str | None:
+def _find_precatorio_number(text: str, fallback_numero: str | None = None) -> str | None:
+    if fallback_numero and fallback_numero in text:
+        return fallback_numero
+
+    # Numeros CNJ tambem aparecem como processo originario; so trata como
+    # precatorio quando o contexto textual deixar esse papel explicito.
+    explicit_patterns = (
+        rf"(?:precatorio|precat[oó]rio)\s*(?:n\.?|numero|n[uú]mero)?\s*[:.]?\s*({PRECATORIO_PATTERN})",
+        rf"(?:numero|n[uú]mero)\s*[:.]?\s*({PRECATORIO_PATTERN})",
+        rf"of\.?\s*req\.?\s*({PRECATORIO_PATTERN})",
+    )
+    for pattern in explicit_patterns:
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match:
+            return match.group(1)
+
+    if fallback_numero:
+        return fallback_numero
+
     match = PRECATORIO_RE.search(text)
     return match.group(0) if match else None
 
@@ -134,6 +152,8 @@ def _extract_processo_originario(text: str) -> str | None:
     patterns = [
         r"(?:proc\.?\s*orig|processo\s+originario|proc\.?\s*originario)\s*:\s*(" + PRECATORIO_PATTERN + r")",
         r"processo\s+originario\s+(" + PRECATORIO_PATTERN + r")",
+        r"autos\s+judiciais\s+n\.?\s*(" + PRECATORIO_PATTERN + r")",
+        r"autos\s+n\.?\s*(" + PRECATORIO_PATTERN + r")",
     ]
     for pattern in patterns:
         match = re.search(pattern, text, re.IGNORECASE)
@@ -166,6 +186,12 @@ def _extract_int_after(text: str, pattern: str) -> int | None:
 def _classify_status(text: str) -> tuple[StatusPrecatorio, str]:
     normalized = _normalize(text)
 
+    if _has_critical_status_ambiguity(normalized):
+        return (
+            StatusPrecatorio.REVISAO_NECESSARIA,
+            "Documento contem ambiguidade critica, negacao ou sinais conflitantes sobre pagamento, suspensao ou cancelamento.",
+        )
+
     if _contains_any(normalized, ("cancelado", "cancelamento", "anulado", "sem efeito")):
         return StatusPrecatorio.CANCELADO, "Documento indica cancelamento, anulacao ou perda de efeito."
 
@@ -195,7 +221,7 @@ def _classify_status(text: str) -> tuple[StatusPrecatorio, str]:
     ):
         return StatusPrecatorio.SUSPENSO, "Documento indica suspensao ou pendencia impeditiva de pagamento."
 
-    if _contains_any(normalized, ("aguardando pagamento", "posicao na fila", "orcamento previsto")):
+    if _contains_any(normalized, ("aguardando pagamento", "aguardando ordem cronologica", "posicao na fila", "orcamento previsto")):
         return StatusPrecatorio.AGUARDANDO_PAGAMENTO, "Documento indica permanencia em fila de pagamento."
 
     return StatusPrecatorio.AGUARDANDO_PAGAMENTO, "Status nao explicito; classificado como aguardando por conservadorismo."
@@ -203,6 +229,23 @@ def _classify_status(text: str) -> tuple[StatusPrecatorio, str]:
 
 def _contains_any(text: str, needles: tuple[str, ...]) -> bool:
     return any(needle in text for needle in needles)
+
+
+def _has_critical_status_ambiguity(normalized: str) -> bool:
+    # Frases juridicas negadas sao mais seguras como REVISAO_NECESSARIA do que
+    # falso positivo de PAGO, SUSPENSO ou CANCELADO por uma palavra isolada.
+    status_terms = r"(?:pagamento|deposito|quitacao|baixa|suspensao|suspenso|cancelamento|cancelado)"
+    negation_patterns = (
+        rf"\bnao\s+(?:ha|consta|existe|houve|foi|foram)\b[^\.\n]{{0,120}}\b{status_terms}\b",
+        rf"\bsem\s+(?:noticia|registro|comprovante|decisao)\b[^\.\n]{{0,120}}\b{status_terms}\b",
+        rf"\bausente\s+(?:comprovante|registro|decisao)\b[^\.\n]{{0,120}}\b{status_terms}\b",
+    )
+    indirect_final_state_patterns = (
+        r"\bperda\s+de\s+efeito\b",
+        r"\bretirad[ao]\b[^\.\n]{0,120}\b(?:relacao|lista)\b[^\.\n]{0,120}\bpagamentos?\b",
+        r"\bnao\s+subsiste\b[^\.\n]{0,120}\bobrigacao\s+de\s+pagamento\b",
+    )
+    return any(re.search(pattern, normalized) for pattern in (*negation_patterns, *indirect_final_state_patterns))
 
 
 def _extract_events(text: str, status: StatusPrecatorio, status_motivo: str) -> list[ParsedEvent]:
@@ -270,7 +313,7 @@ def _extract_historical_events(text: str) -> list[ParsedEvent]:
                 tipo=tipo,
                 titulo=titulo,
                 descricao=description,
-                data_evento=date(year, 1, 1),
+                data_evento=date(year, 1, 1),  # Eventos com apenas ano usam 1 de janeiro e preservam precisao.
                 precisao="ano",
             )
         )
