@@ -13,7 +13,17 @@ from src.services import persist_collected_numbers
 router = APIRouter(prefix="/rpa", tags=["rpa"])
 
 
-@router.post("/coletar", response_model=RpaCollectResponse)
+@router.post(
+    "/coletar",
+    response_model=RpaCollectResponse,
+    summary="Coletar fila pública do TJPR",
+    description=(
+        "Abre o portal de precatórios do TJPR com Playwright, seleciona o órgão "
+        "devedor quando possível e aguarda a intervenção manual exigida pelo captcha. "
+        "Após a pesquisa, extrai somente os identificadores de precatórios da tabela "
+        "e preserva a ordem cronológica original da página."
+    ),
+)
 def coletar_precatorios(payload: RpaCollectRequest | None = None, db: Session = Depends(get_db)) -> RpaCollectResponse:
     payload = payload or RpaCollectRequest()
     try:
@@ -24,8 +34,15 @@ def coletar_precatorios(payload: RpaCollectRequest | None = None, db: Session = 
     return RpaCollectResponse(total=len(numbers), numeros=numbers)
 
 
-@router.get("/coletas", response_model=list[ColetaRead])
+@router.get(
+    "/coletas",
+    response_model=list[ColetaRead],
+    summary="Consultar coletas realizadas",
+    description=(
+        "Retorna os identificadores persistidos pela etapa de RPA, na ordem em que "
+        "foram encontrados na listagem pública do TJPR."
+    ),
+)
 def listar_coletas(db: Session = Depends(get_db)) -> list[ColetaRead]:
     query = select(ColetaPrecatorio).order_by(ColetaPrecatorio.ordem, ColetaPrecatorio.id)
     return list(db.execute(query).scalars().all())
-
