@@ -9,6 +9,6 @@ venv/
 data/*.db
 data/*.sqlite
 data/*.sqlite3
+data/*.log
 playwright-report/
 test-results/
-

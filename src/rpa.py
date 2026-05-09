@@ -11,7 +11,10 @@ def coletar_precatorios_tjpr(ente_devedor: str | None, timeout_segundos: int) ->
         from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
         from playwright.sync_api import sync_playwright
     except ImportError as exc:
-        raise RuntimeError("Playwright nao esta instalado. Execute: python -m pip install -e . && python -m playwright install chromium") from exc
+        raise RuntimeError(
+            "Playwright nao esta instalado. Execute: "
+            "python -m pip install -r requirements.txt && python -m playwright install chromium"
+        ) from exc
 
     pattern = re.compile(rf"\b{PRECATORIO_PATTERN}\b")
     with sync_playwright() as p:
@@ -55,4 +58,3 @@ def _dedupe_preserving_order(numbers: list[str]) -> list[str]:
         seen.add(number)
         deduped.append(number)
     return deduped
-
