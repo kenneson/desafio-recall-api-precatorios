@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date, datetime, timezone
 
-from sqlalchemy import Date, DateTime, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, Date, DateTime, Float, Integer, JSON, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.database import Base
@@ -38,6 +38,10 @@ class Precatorio(Base, TimestampMixin):
     status: Mapped[str] = mapped_column(String(32), index=True, nullable=False)
     status_motivo: Mapped[str] = mapped_column(Text, nullable=False)
     documento_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    extraction_method: Mapped[str] = mapped_column(String(32), default="rule_based", nullable=False)
+    extraction_confidence: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    extraction_warnings: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    llm_recommended: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
 
 class ColetaPrecatorio(Base):
@@ -74,4 +78,3 @@ class TimelineEvent(Base):
     precisao: Mapped[str] = mapped_column(String(16), nullable=False, default="desconhecida")
     origem: Mapped[str] = mapped_column(String(32), index=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
-
