@@ -1,0 +1,15 @@
+PRECATORIO 0037291-55.2019.8.16.0000
+
+Credor: CONSTRUTORA VALE DO IGUACU LTDA
+CNPJ: 12.345.678/0001-99
+Natureza do credito: nao alimentar
+Devedor: Municipio de Londrina
+
+Oficio: 22/06/2019
+Proc orig: 0003312-08.2014.8.16.0056
+Valor: R$ 1.820.000,00
+
+*** CREDITO EXTINTO ***
+Extincao por pagamento integral realizado em 18/04/2024.
+Comprovante de transferencia: DOC n. 2024/041892
+Baixa determinada pelo Juizo da Execucao em 22/04/2024.

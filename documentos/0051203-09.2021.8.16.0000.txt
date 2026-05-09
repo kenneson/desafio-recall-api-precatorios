@@ -1,0 +1,14 @@
+of. req. 0051203-09.2021.8.16.0000
+
+titular: ANA BEATRIZ MOURA - cpf 567.234.109-88
+ente: estado do parana
+proc orig: 0011209-34.2017.8.16.0030
+nat: alimentar
+
+data oficio: 30/09/2021
+val. inscrito: 412.780,00
+
+sit: em processamento / analise documental pendente
+obs: documentacao do cessionario incompleta - aguardando regularizacao 
+junto ao cartorio
+previsao orc: 2026

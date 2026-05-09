@@ -1,0 +1,25 @@
+[project]
+name = "sistema-precatorios"
+version = "0.1.0"
+description = "API para coleta, processamento e auditoria de precatorios do TJPR."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115.0",
+    "pydantic>=2.7.0",
+    "sqlalchemy>=2.0.0",
+    "uvicorn[standard]>=0.30.0",
+    "playwright>=1.48.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "httpx>=0.27.0",
+    "pytest>=8.0.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"
+

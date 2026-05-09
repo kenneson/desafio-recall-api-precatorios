@@ -1,0 +1,18 @@
+TRIBUNAL DE JUSTICA DO ESTADO DO PARANA
+PRECATORIO N. 0023456-81.2018.8.16.0000
+
+Credor: JOSE CARLOS FERREIRA
+CPF: 045.678.912-33
+Ente Devedor: MUNICIPIO DE CURITIBA
+Processo originario: 0004521-19.2011.8.16.0001
+Oficio requisitorio expedido em: 14/03/2019
+Valor inscrito: R$ 87.450,00
+
+Situacao: AGUARDANDO PAGAMENTO
+Posicao na fila: 312
+Orcamento previsto: 2025
+
+Historico:
+- 2011: ajuizamento da acao trabalhista
+- 2018: transito em julgado
+- 14/03/2019: exped. oficio requisitorio
