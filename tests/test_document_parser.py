@@ -44,6 +44,35 @@ def test_extrai_campos_estruturados_de_documento_com_fila() -> None:
     assert parsed.valor_centavos == 8_745_000
     assert parsed.posicao_fila == 312
     assert parsed.previsao_orcamentaria == 2025
+    assert "CPF com digito verificador invalido: 045.678.912-33." in parsed.warnings
+
+
+def test_valida_cpf_com_digito_verificador() -> None:
+    text = """
+    PRECATORIO N. 0067842-91.2022.8.16.0000
+    Credor: LUIZ FERNANDO MARTINS ROCHA
+    CPF: 529.982.247-25
+    Situacao: AGUARDANDO ORDEM CRONOLOGICA
+    """
+
+    parsed = parse_document_text(text)
+
+    assert parsed.documento_credor == "529.982.247-25"
+    assert not any("CPF com digito verificador invalido" in warning for warning in parsed.warnings)
+
+
+def test_valida_cnpj_com_digito_verificador() -> None:
+    text = """
+    PRECATORIO N. 0067842-91.2022.8.16.0000
+    Credor: EMPRESA TESTE LTDA
+    CNPJ: 04.252.011/0001-10
+    Situacao: AGUARDANDO ORDEM CRONOLOGICA
+    """
+
+    parsed = parse_document_text(text)
+
+    assert parsed.documento_credor == "04.252.011/0001-10"
+    assert not any("CNPJ com digito verificador invalido" in warning for warning in parsed.warnings)
 
 
 def test_extrai_posicao_estimada_na_fila() -> None:

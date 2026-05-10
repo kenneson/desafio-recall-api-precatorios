@@ -294,6 +294,7 @@ GET /precatorios/0023456-81.2018.8.16.0000/timeline
 ## Cuidados de segurança
 
 - O número do precatório é validado por regex antes de qualquer operação.
+- CPF e CNPJ extraídos dos documentos têm o dígito verificador validado; inconsistências são mantidas como aviso em `extraction_warnings`.
 - O caminho do documento é resolvido de forma controlada dentro de `documentos/`, evitando path traversal.
 - O banco é acessado por SQLAlchemy ORM, sem concatenação de SQL com entrada externa.
 - As entradas e respostas HTTP usam schemas Pydantic.

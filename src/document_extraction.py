@@ -273,7 +273,12 @@ def _should_recommend_llm(parsed: ParsedDocument, warnings: list[str]) -> bool:
         return True
     if parsed.status == StatusPrecatorio.REVISAO_NECESSARIA:
         return True
-    return len(warnings) >= 2
+    actionable_warnings = [warning for warning in warnings if not _is_identity_digit_warning(warning)]
+    return len(actionable_warnings) >= 2
+
+
+def _is_identity_digit_warning(warning: str) -> bool:
+    return warning.startswith(("CPF com digito verificador invalido", "CNPJ com digito verificador invalido"))
 
 
 def _env_flag(name: str) -> bool:

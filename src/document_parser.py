@@ -68,7 +68,7 @@ def parse_document_text(text: str, fallback_numero: str | None = None) -> Parsed
     return ParsedDocument(
         numero=numero,
         credor=_extract_creditor(text),
-        documento_credor=_extract_documento_credor(text),
+        documento_credor=_extract_documento_credor(text, warnings),
         ente_devedor=_extract_devedor(text),
         processo_originario=_extract_processo_originario(text),
         natureza=_extract_natureza(text),
@@ -134,12 +134,57 @@ def _extract_creditor(text: str) -> str | None:
     return _clean_value(match.group(1)) if match else None
 
 
-def _extract_documento_credor(text: str) -> str | None:
+def _extract_documento_credor(text: str, warnings: list[str]) -> str | None:
     cpf = CPF_RE.search(text)
     if cpf:
-        return cpf.group(0)
+        value = cpf.group(0)
+        if not _is_valid_cpf(value):
+            warnings.append(f"CPF com digito verificador invalido: {value}.")
+        return value
+
     cnpj = CNPJ_RE.search(text)
-    return cnpj.group(0) if cnpj else None
+    if cnpj:
+        value = cnpj.group(0)
+        if not _is_valid_cnpj(value):
+            warnings.append(f"CNPJ com digito verificador invalido: {value}.")
+        return value
+
+    return None
+
+
+def _is_valid_cpf(value: str) -> bool:
+    digits = _only_digits(value)
+    if len(digits) != 11 or len(set(digits)) == 1:
+        return False
+
+    for position in (9, 10):
+        total = sum(int(digits[index]) * (position + 1 - index) for index in range(position))
+        check_digit = (total * 10) % 11
+        if check_digit == 10:
+            check_digit = 0
+        if check_digit != int(digits[position]):
+            return False
+    return True
+
+
+def _is_valid_cnpj(value: str) -> bool:
+    digits = _only_digits(value)
+    if len(digits) != 14 or len(set(digits)) == 1:
+        return False
+
+    first_weights = (5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2)
+    second_weights = (6, *first_weights)
+    for position, weights in ((12, first_weights), (13, second_weights)):
+        total = sum(int(digits[index]) * weights[index] for index in range(position))
+        remainder = total % 11
+        check_digit = 0 if remainder < 2 else 11 - remainder
+        if check_digit != int(digits[position]):
+            return False
+    return True
+
+
+def _only_digits(value: str) -> str:
+    return re.sub(r"\D", "", value)
 
 
 def _extract_devedor(text: str) -> str | None:

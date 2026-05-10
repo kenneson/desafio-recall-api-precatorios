@@ -121,6 +121,8 @@ A timeline combina eventos extraídos do texto original com eventos cadastrados 
 
 Datas inválidas vindas de OCR, como `31/02/2020`, não interrompem o processamento. O parser ignora a data inválida, registra um aviso em `extraction_warnings` e mantém o restante do documento processável. A decisão evita erro 500 por sujeira de OCR e preserva rastreabilidade para revisão posterior.
 
+CPF e CNPJ extraídos dos documentos também passam por validação de dígito verificador. Como a massa do desafio usa dados simulados, o sistema preserva o valor textual encontrado e registra inconsistências como aviso em `extraction_warnings`, em vez de descartar silenciosamente a informação do OCR.
+
 ## Preparação para LLM
 
 A versão atual usa parser determinístico por regras como caminho principal apenas considerando o escopo deste desafio: os documentos de entrada são `.txt`, a massa é pequena e a avaliação pede uma solução simples, auditável e reproduzível. Em um uso real, em produção ou em maior escala, o ideal seria tratar a LLM como parte central da extração, com prompts bem definidos, saída estruturada, validação por schema, evidências textuais obrigatórias e regras de domínio para impedir inferências sem base no documento.
