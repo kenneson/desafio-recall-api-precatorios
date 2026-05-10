@@ -227,11 +227,12 @@ class LlmDocumentPayload(BaseModel):
             status_motivo=self.status_motivo,
             documento_hash=rule_based.documento_hash,
             eventos=[event.to_parsed_event() for event in self.eventos],
+            warnings=[],
         )
 
 
 def _build_extraction_warnings(parsed: ParsedDocument) -> list[str]:
-    warnings: list[str] = []
+    warnings: list[str] = list(parsed.warnings)
     expected_fields = {
         "credor": parsed.credor,
         "ente_devedor": parsed.ente_devedor,
@@ -255,7 +256,7 @@ def _build_extraction_warnings(parsed: ParsedDocument) -> list[str]:
     if not parsed.eventos:
         warnings.append("Nenhum evento foi extraido para a timeline.")
 
-    return warnings
+    return list(dict.fromkeys(warnings))
 
 
 def _estimate_confidence(parsed: ParsedDocument, warnings: list[str]) -> float:
