@@ -20,7 +20,14 @@ Este repositório entrega uma API em FastAPI para acompanhar precatórios judici
 
 ## Execução local
 
-Criar e ativar um ambiente virtual é recomendado:
+Clonar o repositório e acessar a pasta do projeto:
+
+```bash
+git clone https://github.com/kenneson/desafio-recall-api-precatorios.git
+cd desafio-recall-api-precatorios
+```
+
+Criar um ambiente virtual:
 
 ```bash
 python -m venv .venv
@@ -54,11 +61,7 @@ http://127.0.0.1:8000/docs
 
 Abrir `http://127.0.0.1:8000/` também redireciona automaticamente para `/docs`.
 
-Para carregar variáveis locais, como configuração opcional de IA, usar:
-
-```bash
-python -m uvicorn src.main:app --reload --env-file .env
-```
+## Variáveis de ambiente
 
 O arquivo `.env.example` contém as variáveis aceitas pela aplicação. Para usar configurações locais, criar um `.env` a partir dele e preencher apenas os valores necessários.
 
@@ -72,6 +75,12 @@ No Linux/macOS:
 
 ```bash
 cp .env.example .env
+```
+
+Para carregar variáveis locais ao subir a API, usar:
+
+```bash
+python -m uvicorn src.main:app --reload --env-file .env
 ```
 
 O banco SQLite local é criado em `data/app.db` na primeira execução da API. Se o schema local ficar desatualizado durante o desenvolvimento, remover esse arquivo e subir a API novamente recria o banco a partir dos modelos SQLAlchemy.
