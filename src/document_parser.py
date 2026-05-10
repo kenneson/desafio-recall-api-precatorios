@@ -272,7 +272,7 @@ def _classify_status(text: str) -> tuple[StatusPrecatorio, str]:
     if _contains_any(normalized, ("aguardando pagamento", "aguardando ordem cronologica", "posicao na fila", "orcamento previsto")):
         return StatusPrecatorio.AGUARDANDO_PAGAMENTO, "Documento indica permanencia em fila de pagamento."
 
-    return StatusPrecatorio.AGUARDANDO_PAGAMENTO, "Status nao explicito; classificado como aguardando por conservadorismo."
+    return StatusPrecatorio.REVISAO_NECESSARIA, "Status nao explicito; enviado para revisao por conservadorismo."
 
 
 def _contains_any(text: str, needles: tuple[str, ...]) -> bool:
