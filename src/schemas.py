@@ -73,8 +73,17 @@ class TaskRead(BaseModel):
 
 
 class RpaCollectRequest(BaseModel):
-    ente_devedor: str | None = Field(default="Estado do Parana", max_length=120)
-    timeout_segundos: int = Field(default=180, ge=30, le=900)
+    ente_devedor: str | None = Field(
+        default="Estado do Parana",
+        max_length=120,
+        description="Texto usado para tentar selecionar o orgao devedor no dropdown do TJPR.",
+    )
+    timeout_segundos: int = Field(
+        default=180,
+        ge=30,
+        le=900,
+        description="Tempo maximo para o usuario resolver o captcha, clicar em Pesquisar e a tabela aparecer.",
+    )
 
 
 class ColetaRead(BaseModel):
@@ -89,6 +98,13 @@ class ColetaRead(BaseModel):
 class RpaCollectResponse(BaseModel):
     total: int
     numeros: list[str]
+    avisos: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Alertas da coleta. Quando o portal exibe Autos do Precatorio mascarado, "
+            "a resposta informa que foi persistido o Oficio Precatorio."
+        ),
+    )
 
 
 class ProcessamentoResponse(BaseModel):
