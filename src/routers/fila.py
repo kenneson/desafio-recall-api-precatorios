@@ -15,7 +15,7 @@ router = APIRouter(prefix="/fila", tags=["fila"])
     response_model=list[TaskRead],
     summary="Consultar fila de processamento",
     description=(
-        "Retorna as tarefas enfileiradas para execução futura. A ordenação segue "
+        "Retorna as tarefas enfileiradas para execucao futura. A ordenacao segue "
         "prioridade crescente e, em caso de empate, a ordem de chegada."
     ),
 )
@@ -29,8 +29,8 @@ def listar_fila(db: Session = Depends(get_db)) -> list[TaskRead]:
     status_code=201,
     summary="Inserir tarefa manual na fila",
     description=(
-        "Cria uma tarefa operacional manual para um precatório já identificado. "
-        "Esse endpoint complementa a fila automática criada durante o processamento "
+        "Cria uma tarefa operacional manual para um precatorio ja identificado. "
+        "Esse endpoint complementa a fila automatica criada durante o processamento "
         "do documento."
     ),
 )
