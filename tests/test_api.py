@@ -8,9 +8,11 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 import src.services as services
+import src.routers.rpa as rpa_router
 from src import models  # noqa: F401
 from src.database import Base, get_db
 from src.main import app
+from src.rpa import RpaNoCollectableNumbers
 
 
 @pytest.fixture()
@@ -35,7 +37,7 @@ def client(tmp_path) -> Generator[TestClient, None, None]:
 def test_processa_precatorio_e_consulta_timeline(client: TestClient) -> None:
     response = client.post("/precatorios/0023456-81.2018.8.16.0000/processar")
 
-    assert response.status_code == 200
+    assert response.status_code == 201
     body = response.json()
     assert body["precatorio"]["status"] == "AGUARDANDO_PAGAMENTO"
     assert body["precatorio"]["extraction_method"] == "rule_based"
@@ -59,6 +61,28 @@ def test_raiz_redireciona_para_docs(client: TestClient) -> None:
     assert response.headers["location"] == "/docs"
 
 
+def test_rpa_coleta_oficio_com_aviso_quando_cnj_esta_mascarado(client: TestClient, monkeypatch) -> None:
+    monkeypatch.setattr(rpa_router, "coletar_precatorios_tjpr", lambda ente, timeout: ["2024/906061"])
+
+    response = client.post("/rpa/coletar", json={"ente_devedor": "CURITIBA", "timeout_segundos": 30})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["numeros"] == ["2024/906061"]
+    assert body["avisos"]
+
+
+def test_rpa_retorna_422_quando_tabela_nao_tem_identificador_coletavel(client: TestClient, monkeypatch) -> None:
+    def fail(_ente, _timeout):
+        raise RpaNoCollectableNumbers("Tabela carregada, mas nenhum identificador foi encontrado.")
+
+    monkeypatch.setattr(rpa_router, "coletar_precatorios_tjpr", fail)
+
+    response = client.post("/rpa/coletar", json={"ente_devedor": "CURITIBA", "timeout_segundos": 30})
+
+    assert response.status_code == 422
+
+
 def test_fila_ordena_por_prioridade_e_chegada(client: TestClient) -> None:
     client.post("/precatorios/0023456-81.2018.8.16.0000/processar")
     client.post("/precatorios/0041872-33.2020.8.16.0000/processar")
@@ -69,6 +93,20 @@ def test_fila_ordena_por_prioridade_e_chegada(client: TestClient) -> None:
     fila = response.json()
     assert [task["prioridade"] for task in fila] == [2, 3]
     assert fila[0]["precatorio_numero"] == "0041872-33.2020.8.16.0000"
+
+
+def test_cria_tarefa_manual_na_fila_com_status_201(client: TestClient) -> None:
+    payload = {
+        "precatorio_numero": "0023456-81.2018.8.16.0000",
+        "acao": "MONITORAR_PAGAMENTO",
+        "prioridade": 3,
+        "motivo": "Monitoramento manual solicitado.",
+    }
+
+    response = client.post("/fila", json=payload)
+
+    assert response.status_code == 201
+    assert response.json()["acao"] == "MONITORAR_PAGAMENTO"
 
 
 def test_permite_evento_manual_na_timeline(client: TestClient) -> None:
@@ -100,7 +138,7 @@ def test_marca_recomendacao_de_ia_quando_extracao_tem_baixa_confianca(client: Te
 
     response = client.post(f"/precatorios/{numero}/processar")
 
-    assert response.status_code == 200
+    assert response.status_code == 201
     precatorio = response.json()["precatorio"]
     assert precatorio["llm_recommended"] is True
     assert precatorio["extraction_confidence"] < 0.75
@@ -125,7 +163,7 @@ def test_documento_ambiguo_vai_para_revisao_e_recomenda_ia(client: TestClient, t
 
     response = client.post(f"/precatorios/{numero}/processar")
 
-    assert response.status_code == 200
+    assert response.status_code == 201
     body = response.json()
     assert body["precatorio"]["status"] == "REVISAO_NECESSARIA"
     assert body["precatorio"]["llm_recommended"] is True
@@ -151,7 +189,7 @@ def test_perda_de_efeito_vai_para_revisao_e_nao_para_monitoramento(client: TestC
 
     response = client.post(f"/precatorios/{numero}/processar")
 
-    assert response.status_code == 200
+    assert response.status_code == 201
     body = response.json()
     assert body["precatorio"]["status"] == "REVISAO_NECESSARIA"
     assert body["precatorio"]["llm_recommended"] is True
