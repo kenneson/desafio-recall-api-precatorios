@@ -142,7 +142,10 @@ def test_marca_recomendacao_de_ia_quando_extracao_tem_baixa_confianca(client: Te
     precatorio = response.json()["precatorio"]
     assert precatorio["llm_recommended"] is True
     assert precatorio["extraction_confidence"] < 0.75
-    assert "Status classificado por fallback conservador." in precatorio["extraction_warnings"]
+    assert precatorio["status"] == "REVISAO_NECESSARIA"
+    assert response.json()["tarefa"]["acao"] == "REVISAR_CLASSIFICACAO"
+    assert response.json()["tarefa"]["prioridade"] == 1
+    assert "Status nao explicito; enviado para revisao por fallback conservador." in precatorio["extraction_warnings"]
 
 
 def test_documento_ambiguo_vai_para_revisao_e_recomenda_ia(client: TestClient, tmp_path, monkeypatch) -> None:
