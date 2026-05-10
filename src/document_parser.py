@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import re
 import unicodedata
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 
 from src.domain import PRECATORIO_PATTERN, StatusPrecatorio
@@ -55,6 +55,7 @@ class ParsedDocument:
     status_motivo: str
     documento_hash: str
     eventos: list[ParsedEvent]
+    warnings: list[str] = field(default_factory=list)
 
 
 def parse_document_text(text: str, fallback_numero: str | None = None) -> ParsedDocument:
@@ -62,6 +63,7 @@ def parse_document_text(text: str, fallback_numero: str | None = None) -> Parsed
     if not numero:
         raise ValueError("Numero do precatorio nao encontrado no documento.")
 
+    warnings: list[str] = []
     status, status_motivo = _classify_status(text)
     return ParsedDocument(
         numero=numero,
@@ -76,7 +78,8 @@ def parse_document_text(text: str, fallback_numero: str | None = None) -> Parsed
         status=status,
         status_motivo=status_motivo,
         documento_hash=hashlib.sha256(text.encode("utf-8")).hexdigest(),
-        eventos=_extract_events(text, status, status_motivo),
+        eventos=_extract_events(text, status, status_motivo, warnings),
+        warnings=_dedupe_warnings(warnings),
     )
 
 
@@ -248,10 +251,10 @@ def _has_critical_status_ambiguity(normalized: str) -> bool:
     return any(re.search(pattern, normalized) for pattern in (*negation_patterns, *indirect_final_state_patterns))
 
 
-def _extract_events(text: str, status: StatusPrecatorio, status_motivo: str) -> list[ParsedEvent]:
+def _extract_events(text: str, status: StatusPrecatorio, status_motivo: str, warnings: list[str]) -> list[ParsedEvent]:
     events: list[ParsedEvent] = []
-    events.extend(_extract_historical_events(text))
-    oficio_date, oficio_precision = _extract_oficio_date(text)
+    events.extend(_extract_historical_events(text, warnings))
+    oficio_date, oficio_precision = _extract_oficio_date(text, warnings)
     if oficio_date:
         events.append(
             ParsedEvent(
@@ -263,7 +266,7 @@ def _extract_events(text: str, status: StatusPrecatorio, status_motivo: str) -> 
             )
         )
 
-    status_date, status_precision = _extract_status_date(text, status)
+    status_date, status_precision = _extract_status_date(text, status, warnings)
     events.append(
         ParsedEvent(
             tipo="STATUS_IDENTIFICADO",
@@ -276,20 +279,21 @@ def _extract_events(text: str, status: StatusPrecatorio, status_motivo: str) -> 
     return _dedupe_events(events)
 
 
-def _extract_historical_events(text: str) -> list[ParsedEvent]:
+def _extract_historical_events(text: str, warnings: list[str]) -> list[ParsedEvent]:
     events: list[ParsedEvent] = []
     normalized = _normalize(text)
 
     ajuizado = re.search(r"ajuizado\s+em\s+([a-z]+)\s+de\s+(\d{4})", normalized)
     if ajuizado:
         month = MONTHS.get(ajuizado.group(1))
-        if month:
+        event_date = _safe_date(int(ajuizado.group(2)), month, 1, ajuizado.group(0), warnings) if month else None
+        if event_date:
             events.append(
                 ParsedEvent(
                     tipo="AJUIZAMENTO",
                     titulo="Processo ajuizado",
                     descricao="Ajuizamento extraido do texto do documento.",
-                    data_evento=date(int(ajuizado.group(2)), month, 1),
+                    data_evento=event_date,
                     precisao="mes",
                 )
             )
@@ -308,30 +312,34 @@ def _extract_historical_events(text: str) -> list[ParsedEvent]:
             tipo = "HISTORICO_DOCUMENTO"
             titulo = "Evento historico informado"
 
+        event_date = _safe_date(year, 1, 1, match.group(1), warnings)
+        if not event_date:
+            continue
+
         events.append(
             ParsedEvent(
                 tipo=tipo,
                 titulo=titulo,
                 descricao=description,
-                data_evento=date(year, 1, 1),  # Eventos com apenas ano usam 1 de janeiro e preservam precisao.
+                data_evento=event_date,  # Eventos com apenas ano usam 1 de janeiro e preservam precisao.
                 precisao="ano",
             )
         )
     return events
 
 
-def _extract_oficio_date(text: str) -> tuple[date | None, str]:
+def _extract_oficio_date(text: str, warnings: list[str]) -> tuple[date | None, str]:
     patterns = [
         r"(?:oficio\s+requisitorio\s+expedido\s+em|data\s+oficio|oficio\s+requisitorio|oficio)\s*:\s*([^\n]+)",
         r"oficio\s+requisitorio\s+foi\s+expedido\s+.+?\s+em\s+([^\.]+)",
     ]
-    return _extract_date_near(text, patterns)
+    return _extract_date_near(text, patterns, warnings)
 
 
-def _extract_status_date(text: str, status: StatusPrecatorio) -> tuple[date | None, str]:
+def _extract_status_date(text: str, status: StatusPrecatorio, warnings: list[str]) -> tuple[date | None, str]:
     normalized = _normalize(text)
     if status == StatusPrecatorio.SUSPENSO:
-        return _extract_date_near(normalized, (r"decisao\s+proferida\s+em\s+([^,\n\.]+)",))
+        return _extract_date_near(normalized, (r"decisao\s+proferida\s+em\s+([^,\n\.]+)",), warnings)
     if status == StatusPrecatorio.PAGO:
         return _extract_date_near(
             normalized,
@@ -340,41 +348,53 @@ def _extract_status_date(text: str, status: StatusPrecatorio) -> tuple[date | No
                 r"pagamento\s+efetivado\s+em\s+([^,\n\.]+)",
                 r"baixa\s+determinada\s+.+?\s+em\s+([^,\n\.]+)",
             ),
+            warnings,
         )
     return None, "desconhecida"
 
 
-def _extract_date_near(text: str, patterns: tuple[str, ...] | list[str]) -> tuple[date | None, str]:
+def _extract_date_near(text: str, patterns: tuple[str, ...] | list[str], warnings: list[str]) -> tuple[date | None, str]:
     for pattern in patterns:
         match = re.search(pattern, text, re.IGNORECASE)
         if not match:
             continue
-        parsed = _parse_date_fragment(match.group(1))
+        parsed = _parse_date_fragment(match.group(1), warnings)
         if parsed[0]:
             return parsed
     return None, "desconhecida"
 
 
-def _parse_date_fragment(fragment: str) -> tuple[date | None, str]:
+def _parse_date_fragment(fragment: str, warnings: list[str]) -> tuple[date | None, str]:
     numeric = DATE_RE.search(fragment)
     if numeric:
         day, month, year = map(int, numeric.groups())
-        return date(year, month, day), "dia"
+        parsed_date = _safe_date(year, month, day, numeric.group(0), warnings)
+        return (parsed_date, "dia") if parsed_date else (None, "desconhecida")
 
     normalized = _normalize(fragment)
     full = re.search(r"(\d{1,2})\s+de\s+([a-z]+)\s+de\s+(\d{4})", normalized)
     if full:
         month = MONTHS.get(full.group(2))
         if month:
-            return date(int(full.group(3)), month, int(full.group(1))), "dia"
+            parsed_date = _safe_date(int(full.group(3)), month, int(full.group(1)), full.group(0), warnings)
+            return (parsed_date, "dia") if parsed_date else (None, "desconhecida")
 
     month_year = re.search(r"([a-z]+)\s+de\s+(\d{4})", normalized)
     if month_year:
         month = MONTHS.get(month_year.group(1))
         if month:
-            return date(int(month_year.group(2)), month, 1), "mes"
+            parsed_date = _safe_date(int(month_year.group(2)), month, 1, month_year.group(0), warnings)
+            return (parsed_date, "mes") if parsed_date else (None, "desconhecida")
 
     return None, "desconhecida"
+
+
+def _safe_date(year: int, month: int, day: int, raw_value: str, warnings: list[str]) -> date | None:
+    try:
+        return date(year, month, day)
+    except ValueError:
+        warnings.append(f"Data invalida ignorada no OCR: {raw_value}.")
+        return None
 
 
 def _dedupe_events(events: list[ParsedEvent]) -> list[ParsedEvent]:
@@ -387,3 +407,7 @@ def _dedupe_events(events: list[ParsedEvent]) -> list[ParsedEvent]:
         seen.add(key)
         deduped.append(event)
     return deduped
+
+
+def _dedupe_warnings(warnings: list[str]) -> list[str]:
+    return list(dict.fromkeys(warnings))
