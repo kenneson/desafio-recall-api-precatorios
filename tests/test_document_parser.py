@@ -112,6 +112,8 @@ def test_usa_fallback_quando_texto_tem_apenas_processo_originario() -> None:
 
     assert parsed.numero == "0088888-44.2024.8.16.0000"
     assert parsed.processo_originario == "0004412-77.2018.8.16.0019"
+    assert parsed.status == StatusPrecatorio.REVISAO_NECESSARIA
+    assert parsed.status_motivo.startswith("Status nao explicito")
 
 
 def test_classifica_negacao_de_cancelamento_como_revisao_necessaria() -> None:
