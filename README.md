@@ -167,7 +167,7 @@ python -m pytest
 | Método | Endpoint | Status esperado | Finalidade |
 | --- | --- | --- | --- |
 | `GET` | `/health` | `200 OK` | Verifica se a API está respondendo. |
-| `POST` | `/rpa/coletar` | `200 OK` | Abre o portal do TJPR com Playwright, aguarda a interação manual e persiste os números coletados na ordem da tabela. |
+| `POST` | `/rpa/coletar` | `200 OK` | Abre o portal do TJPR com Playwright, aguarda a interação manual, persiste os números coletados na ordem da tabela e registra evento de coleta na timeline quando houver CNJ completo. |
 | `GET` | `/rpa/coletas` | `200 OK` | Lista os números já coletados pelo RPA, preservando a ordem cronológica capturada. |
 | `POST` | `/precatorios/{numero}/processar` | `201 Created` | Localiza o documento `.txt`, extrai os dados estruturados, classifica o status, cria tarefa e registra eventos. |
 | `GET` | `/precatorios/{numero}` | `200 OK` | Consulta o estado estruturado atual de um precatório já processado. |
@@ -181,9 +181,10 @@ python -m pytest
 1. `POST /rpa/coletar` abre o portal do TJPR com Playwright em modo assistido.
 2. O órgão devedor, a verificação de texto e o clique em `Pesquisar` são conduzidos manualmente no navegador aberto quando necessário.
 3. A API extrai o CNJ completo da coluna `Autos do Precatório` quando ele estiver disponível; se o CNJ estiver mascarado, extrai o `Ofício Precatório`, preservando a ordem cronológica encontrada.
-4. `POST /precatorios/{numero}/processar` localiza o documento em `documentos/`, extrai campos estruturados, classifica o status, salva o estado atual, cria uma tarefa e registra eventos na timeline.
-5. `GET /fila` lista tarefas pendentes por prioridade e ordem de chegada.
-6. `GET /precatorios/{numero}/timeline` retorna eventos extraídos do documento e atualizações recebidas pela API.
+4. Quando a coleta retorna CNJ completo, a API registra um evento `COLETA_RPA` na timeline do precatório, com origem `rpa` e a posição encontrada na listagem pública.
+5. `POST /precatorios/{numero}/processar` localiza o documento em `documentos/`, extrai campos estruturados, classifica o status, salva o estado atual, cria uma tarefa e registra eventos na timeline.
+6. `GET /fila` lista tarefas pendentes por prioridade e ordem de chegada.
+7. `GET /precatorios/{numero}/timeline` retorna eventos de coleta, eventos extraídos do documento e atualizações recebidas pela API.
 
 ## Evolução preparada para LLM
 
