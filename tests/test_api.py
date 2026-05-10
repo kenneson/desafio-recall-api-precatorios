@@ -72,6 +72,22 @@ def test_rpa_coleta_oficio_com_aviso_quando_cnj_esta_mascarado(client: TestClien
     assert body["avisos"]
 
 
+def test_rpa_registra_evento_de_coleta_na_timeline_para_cnj(client: TestClient, monkeypatch) -> None:
+    numero = "0023456-81.2018.8.16.0000"
+    monkeypatch.setattr(rpa_router, "coletar_precatorios_tjpr", lambda ente, timeout: [numero])
+
+    response = client.post("/rpa/coletar", json={"ente_devedor": "CURITIBA", "timeout_segundos": 30})
+
+    assert response.status_code == 200
+    timeline = client.get(f"/precatorios/{numero}/timeline")
+    assert timeline.status_code == 200
+    eventos = timeline.json()
+    assert eventos[0]["tipo"] == "COLETA_RPA"
+    assert eventos[0]["origem"] == "rpa"
+    assert "posicao 1" in eventos[0]["descricao"]
+    assert "CURITIBA" in eventos[0]["descricao"]
+
+
 def test_rpa_retorna_422_quando_tabela_nao_tem_identificador_coletavel(client: TestClient, monkeypatch) -> None:
     def fail(_ente, _timeout):
         raise RpaNoCollectableNumbers("Tabela carregada, mas nenhum identificador foi encontrado.")
