@@ -78,10 +78,10 @@ def test_extrator_recomenda_llm_quando_documento_e_ambiguo() -> None:
     result = RuleBasedDocumentExtractor().extract(text)
 
     assert result.method == "rule_based"
-    assert result.document.status == StatusPrecatorio.AGUARDANDO_PAGAMENTO
+    assert result.document.status == StatusPrecatorio.REVISAO_NECESSARIA
     assert result.confidence < 0.75
     assert result.llm_recommended is True
-    assert "Status classificado por fallback conservador." in result.warnings
+    assert "Status nao explicito; enviado para revisao por fallback conservador." in result.warnings
 
 
 def test_extrator_recomenda_llm_em_ambiguidade_critica() -> None:
