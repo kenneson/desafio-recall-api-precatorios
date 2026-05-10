@@ -239,7 +239,12 @@ def queue_query(status: TaskStatus | None = TaskStatus.PENDENTE) -> Select[tuple
     return query.order_by(FilaTask.prioridade, FilaTask.created_at, FilaTask.id)
 
 
-def persist_collected_numbers(numbers: list[str], db: Session, source: str = RPA_SOURCE_URL) -> list[ColetaPrecatorio]:
+def persist_collected_numbers(
+    numbers: list[str],
+    db: Session,
+    source: str = RPA_SOURCE_URL,
+    ente_devedor: str | None = None,
+) -> list[ColetaPrecatorio]:
     rows: list[ColetaPrecatorio] = []
     for index, numero in enumerate(numbers, start=1):
         validate_coleta_precatorio_numero(numero)
@@ -250,10 +255,31 @@ def persist_collected_numbers(numbers: list[str], db: Session, source: str = RPA
         row.ordem = index
         row.origem = source
         rows.append(row)
+        if PRECATORIO_RE.fullmatch(numero):
+            create_timeline_events(
+                numero,
+                [_collection_timeline_event(index, ente_devedor)],
+                "rpa",
+                db,
+                dedupe=False,
+            )
     db.commit()
     for row in rows:
         db.refresh(row)
     return rows
+
+
+def _collection_timeline_event(ordem: int, ente_devedor: str | None = None) -> ParsedEvent:
+    description = f"Identificado na posicao {ordem} da listagem publica do TJPR."
+    if ente_devedor:
+        description = f"{description} Orgao devedor pesquisado: {ente_devedor}."
+    return ParsedEvent(
+        tipo="COLETA_RPA",
+        titulo="Precatorio coletado na fila publica",
+        descricao=description,
+        data_evento=date.today(),
+        precisao="dia",
+    )
 
 
 def _timeline_event_exists(numero: str, event: ParsedEvent, origem: str, db: Session) -> bool:
