@@ -36,7 +36,7 @@ TASK_RULES: dict[StatusPrecatorio, tuple[TaskAction, int, str]] = {
     StatusPrecatorio.REVISAO_NECESSARIA: (
         TaskAction.REVISAR_CLASSIFICACAO,
         1,
-        "Documento possui ambiguidade critica e deve ser revisado antes da decisao operacional.",
+        "Documento exige revisao antes da decisao operacional.",
     ),
     StatusPrecatorio.SUSPENSO: (
         TaskAction.ACOMPANHAR_SUSPENSAO,
