@@ -23,10 +23,11 @@ router = APIRouter(prefix="/precatorios", tags=["precatorios"])
 @router.post(
     "/{numero}/processar",
     response_model=ProcessamentoResponse,
-    summary="Processar documento do precatório",
+    status_code=201,
+    summary="Processar documento do precatorio",
     description=(
-        "Localiza o arquivo texto correspondente ao número informado em /documentos, "
-        "extrai os campos estruturados, classifica o status, salva o precatório, "
+        "Localiza o arquivo texto correspondente ao numero informado em /documentos, "
+        "extrai os campos estruturados, classifica o status, salva o precatorio, "
         "cria a tarefa de fila coerente com a taxonomia e registra eventos na linha "
         "do tempo."
     ),
@@ -44,10 +45,10 @@ def processar_precatorio(numero: str = Path(pattern=PRECATORIO_FULL_PATTERN), db
 @router.get(
     "/{numero}",
     response_model=PrecatorioRead,
-    summary="Consultar precatório processado",
+    summary="Consultar precatorio processado",
     description=(
-        "Retorna os dados estruturados já persistidos para um precatório. "
-        "Use este endpoint após o processamento do documento correspondente."
+        "Retorna os dados estruturados ja persistidos para um precatorio. "
+        "Use este endpoint apos o processamento do documento correspondente."
     ),
 )
 def obter_precatorio(numero: str = Path(pattern=PRECATORIO_FULL_PATTERN), db: Session = Depends(get_db)) -> PrecatorioRead:
@@ -62,7 +63,7 @@ def obter_precatorio(numero: str = Path(pattern=PRECATORIO_FULL_PATTERN), db: Se
     response_model=list[TimelineEventRead],
     summary="Consultar linha do tempo",
     description=(
-        "Lista, em ordem cronológica, os eventos extraídos do documento e os eventos "
+        "Lista, em ordem cronologica, os eventos extraidos do documento e os eventos "
         "registrados posteriormente pela API."
     ),
 )
@@ -76,9 +77,9 @@ def listar_timeline(numero: str = Path(pattern=PRECATORIO_FULL_PATTERN), db: Ses
     status_code=201,
     summary="Registrar evento manual",
     description=(
-        "Adiciona um evento informado pela API à linha do tempo do precatório. "
-        "Serve para registrar atualizações posteriores ao documento original, como "
-        "contato com cartório, nova certidão ou revisão operacional."
+        "Adiciona um evento informado pela API a linha do tempo do precatorio. "
+        "Serve para registrar atualizacoes posteriores ao documento original, como "
+        "contato com cartorio, nova certidao ou revisao operacional."
     ),
 )
 def criar_evento_timeline(
