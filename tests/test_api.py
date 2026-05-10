@@ -140,6 +140,54 @@ def test_permite_evento_manual_na_timeline(client: TestClient) -> None:
     assert response.json()["origem"] == "api"
 
 
+def test_numero_precatorio_invalido_retorna_mensagem_profissional(client: TestClient) -> None:
+    response = client.get("/precatorios/345345657567567")
+
+    assert response.status_code == 422
+    body = response.json()
+    assert body["type"] == "invalid_precatorio_number"
+    assert "formato 0000000-00.0000.0.00.0000" in body["detail"]
+    assert "0028934-17.2017.8.16.0000" in body["detail"]
+    assert "\\d" not in body["detail"]
+
+
+def test_tarefa_manual_com_numero_invalido_retorna_mensagem_profissional(client: TestClient) -> None:
+    payload = {
+        "precatorio_numero": "345345657567567",
+        "acao": "MONITORAR_PAGAMENTO",
+        "prioridade": 3,
+        "motivo": "Monitoramento manual solicitado.",
+    }
+
+    response = client.post("/fila", json=payload)
+
+    assert response.status_code == 422
+    body = response.json()
+    assert body["type"] == "invalid_precatorio_number"
+    assert "formato 0000000-00.0000.0.00.0000" in body["detail"]
+    assert "\\d" not in body["detail"]
+
+
+def test_openapi_nao_expoe_regex_crua_para_numero_do_precatorio(client: TestClient) -> None:
+    schema = client.get("/openapi.json").json()
+    precatorio_paths = [
+        ("/precatorios/{numero}/processar", "post"),
+        ("/precatorios/{numero}", "get"),
+        ("/precatorios/{numero}/timeline", "get"),
+        ("/precatorios/{numero}/eventos", "post"),
+    ]
+
+    for path, method in precatorio_paths:
+        parameters = schema["paths"][path][method]["parameters"]
+        numero_param = next(parameter for parameter in parameters if parameter["name"] == "numero")
+        assert "pattern" not in numero_param["schema"]
+        assert "CNJ completo no formato 0000000-00.0000.0.00.0000" in numero_param["description"]
+
+    task_schema = schema["components"]["schemas"]["TaskCreate"]["properties"]["precatorio_numero"]
+    assert "pattern" not in task_schema
+    assert "CNJ completo no formato 0000000-00.0000.0.00.0000" in task_schema["description"]
+
+
 def test_marca_recomendacao_de_ia_quando_extracao_tem_baixa_confianca(client: TestClient, tmp_path, monkeypatch) -> None:
     numero = "0067842-91.2022.8.16.0000"
     document_path = tmp_path / f"{numero}.txt"

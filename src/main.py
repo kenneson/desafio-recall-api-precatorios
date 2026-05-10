@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 
 from src.database import init_db
 from src.routers import fila, precatorios, rpa
+from src.services import DocumentNotFound, InvalidPrecatorioNumber, PrecatorioNotFound
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +58,39 @@ app = FastAPI(
 app.include_router(precatorios.router)
 app.include_router(fila.router)
 app.include_router(rpa.router)
+
+
+@app.exception_handler(InvalidPrecatorioNumber)
+async def tratar_numero_precatorio_invalido(request: Request, exc: InvalidPrecatorioNumber) -> JSONResponse:
+    return JSONResponse(
+        status_code=422,
+        content={
+            "type": "invalid_precatorio_number",
+            "detail": str(exc),
+        },
+    )
+
+
+@app.exception_handler(DocumentNotFound)
+async def tratar_documento_nao_encontrado(request: Request, exc: DocumentNotFound) -> JSONResponse:
+    return JSONResponse(
+        status_code=404,
+        content={
+            "type": "document_not_found",
+            "detail": str(exc),
+        },
+    )
+
+
+@app.exception_handler(PrecatorioNotFound)
+async def tratar_precatorio_nao_encontrado(request: Request, exc: PrecatorioNotFound) -> JSONResponse:
+    return JSONResponse(
+        status_code=404,
+        content={
+            "type": "precatorio_not_found",
+            "detail": str(exc),
+        },
+    )
 
 
 @app.exception_handler(Exception)

@@ -13,6 +13,7 @@ from src.document_extraction import ExtractionResult, extract_document_text
 from src.document_parser import ParsedDocument, ParsedEvent
 from src.domain import (
     COLETA_PRECATORIO_FULL_PATTERN,
+    INVALID_PRECATORIO_NUMBER_MESSAGE,
     PRECATORIO_PATTERN,
     StatusPrecatorio,
     TaskAction,
@@ -52,7 +53,7 @@ class ProcessamentoResult:
 
 def validate_precatorio_numero(numero: str) -> str:
     if not PRECATORIO_RE.fullmatch(numero):
-        raise InvalidPrecatorioNumber("Numero de precatorio invalido.")
+        raise InvalidPrecatorioNumber(INVALID_PRECATORIO_NUMBER_MESSAGE)
     return numero
 
 

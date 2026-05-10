@@ -4,7 +4,7 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.domain import PRECATORIO_FULL_PATTERN, StatusPrecatorio, TaskAction, TaskStatus
+from src.domain import PRECATORIO_EXAMPLE, PRECATORIO_FORMAT_DESCRIPTION, StatusPrecatorio, TaskAction, TaskStatus
 
 
 class PrecatorioRead(BaseModel):
@@ -53,7 +53,10 @@ class TimelineEventRead(BaseModel):
 
 
 class TaskCreate(BaseModel):
-    precatorio_numero: str = Field(pattern=PRECATORIO_FULL_PATTERN)
+    precatorio_numero: str = Field(
+        description=f"{PRECATORIO_FORMAT_DESCRIPTION} Exemplo: {PRECATORIO_EXAMPLE}.",
+        examples=[PRECATORIO_EXAMPLE],
+    )
     acao: TaskAction
     prioridade: int = Field(ge=1, le=5)
     motivo: str = Field(min_length=3)

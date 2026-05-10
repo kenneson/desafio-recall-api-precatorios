@@ -228,6 +228,7 @@ $env:LLM_MODEL="llama-3.3-70b-versatile"
 Variáveis aceitas:
 
 ```text
+DATABASE_URL=sqlite:///data/app.db
 LLM_ENABLED=false
 GROQ_API_KEY=
 LLM_API_KEY=
