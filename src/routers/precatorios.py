@@ -63,8 +63,8 @@ def obter_precatorio(numero: str = Path(pattern=PRECATORIO_FULL_PATTERN), db: Se
     response_model=list[TimelineEventRead],
     summary="Consultar linha do tempo",
     description=(
-        "Lista, em ordem cronologica, os eventos extraidos do documento e os eventos "
-        "registrados posteriormente pela API."
+        "Lista, em ordem cronologica, eventos da coleta RPA, eventos extraidos do "
+        "documento e eventos registrados posteriormente pela API."
     ),
 )
 def listar_timeline(numero: str = Path(pattern=PRECATORIO_FULL_PATTERN), db: Session = Depends(get_db)) -> list[TimelineEventRead]:
