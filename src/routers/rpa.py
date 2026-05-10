@@ -45,7 +45,7 @@ def coletar_precatorios(payload: RpaCollectRequest | None = None, db: Session = 
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
-    persist_collected_numbers(numbers, db)
+    persist_collected_numbers(numbers, db, ente_devedor=payload.ente_devedor)
     return RpaCollectResponse(total=len(numbers), numeros=numbers, avisos=_build_collection_warnings(numbers))
 
 
