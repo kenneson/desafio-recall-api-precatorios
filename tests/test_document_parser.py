@@ -122,3 +122,17 @@ def test_extrai_status_pago_com_data_de_quitacao_por_extenso() -> None:
 
     assert parsed.status == StatusPrecatorio.PAGO
     assert status_events[0].data_evento.isoformat() == "2023-10-03"
+
+
+def test_ignora_data_invalida_de_ocr_sem_quebrar_parser() -> None:
+    text = """
+    PRECATORIO N. 0067842-91.2022.8.16.0000
+    Oficio requisitorio expedido em: 31/02/2020
+    Situacao: AGUARDANDO ORDEM CRONOLOGICA
+    """
+
+    parsed = parse_document_text(text)
+
+    assert parsed.numero == "0067842-91.2022.8.16.0000"
+    assert parsed.status == StatusPrecatorio.AGUARDANDO_PAGAMENTO
+    assert "Data invalida ignorada no OCR: 31/02/2020." in parsed.warnings
