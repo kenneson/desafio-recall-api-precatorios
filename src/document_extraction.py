@@ -249,8 +249,8 @@ def _build_extraction_warnings(parsed: ParsedDocument) -> list[str]:
             warnings.append(f"Campo esperado ausente: {field_name}.")
 
     if parsed.status_motivo.startswith("Status nao explicito"):
-        warnings.append("Status classificado por fallback conservador.")
-    if parsed.status == StatusPrecatorio.REVISAO_NECESSARIA:
+        warnings.append("Status nao explicito; enviado para revisao por fallback conservador.")
+    elif parsed.status == StatusPrecatorio.REVISAO_NECESSARIA:
         warnings.append("Documento possui ambiguidade critica de status.")
 
     if not parsed.eventos:
@@ -308,6 +308,7 @@ Responda somente JSON valido, sem markdown.
 Nao invente informacoes ausentes. Use null quando o campo nao estiver claro.
 Classifique status em apenas um destes valores:
 AGUARDANDO_PAGAMENTO, SUSPENSO, PAGO, CANCELADO, REVISAO_NECESSARIA.
+Use REVISAO_NECESSARIA quando o status nao estiver explicito no texto.
 Use REVISAO_NECESSARIA quando houver negacoes ou sinais conflitantes que impeçam classificacao segura.
 Datas devem usar ISO 8601 YYYY-MM-DD quando conhecidas.
 Quando so houver ano, use YYYY-01-01 e precisao "ano".
