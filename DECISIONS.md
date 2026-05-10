@@ -66,11 +66,11 @@ Defini cinco estados para normalizar as variações encontradas nos textos:
 - `SUSPENSO`: decisão, liminar, pendência documental ou outra condição que impede o pagamento normal.
 - `PAGO`: quitação, pagamento integral, baixa por pagamento ou crédito extinto por pagamento.
 - `CANCELADO`: cancelamento, anulação ou perda de efeito sem indicação de pagamento.
-- `REVISAO_NECESSARIA`: documento com ambiguidade crítica, negação jurídica ou sinais conflitantes que impedem uma classificação segura por regras.
+- `REVISAO_NECESSARIA`: documento sem status explícito, com ambiguidade crítica, negação jurídica ou sinais conflitantes que impedem uma classificação segura por regras.
 
 A regra de classificação trata documentos como `0051203-09.2021.8.16.0000.txt` como `SUSPENSO` quando eles forem processados pela API. Embora esse texto use “em processamento”, a pendência documental e a necessidade de regularização bloqueiam o fluxo de pagamento; por isso, esse caso é interpretado como uma suspensão operacional.
 
-O status `REVISAO_NECESSARIA` foi incluído para evitar decisões operacionais incorretas quando o texto contém negações, como “não há decisão de cancelamento” ou “sem comprovante de pagamento”. Nesses casos, o sistema não deve classificar apenas pela presença isolada da palavra `cancelamento`, `pagamento` ou `suspensão`; ele sinaliza baixa confiança e recomenda revisão por IA ou análise manual.
+O status `REVISAO_NECESSARIA` foi incluído para evitar decisões operacionais incorretas quando o texto não traz status explícito ou contém negações, como “não há decisão de cancelamento” ou “sem comprovante de pagamento”. Nesses casos, o sistema não deve classificar apenas pela presença isolada da palavra `cancelamento`, `pagamento` ou `suspensão`, nem assumir que o caso está em fila por falta de evidência contrária; ele sinaliza baixa confiança e recomenda revisão por IA ou análise manual.
 
 A taxonomia adotada é propositalmente macro e operacional. Estados mais granulares, como expedido, incluído na LOA, fila cronológica, prioridade, superpreferência, acordo direto e cessão de crédito, não foram tratados como status principais nesta versão porque podem coexistir com o estado de aguardando pagamento. Em uma evolução de produção, esses conceitos seriam modelados como `fase_processual` ou marcadores complementares, mantendo o status principal voltado para a decisão operacional da fila.
 
