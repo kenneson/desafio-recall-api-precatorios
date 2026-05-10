@@ -195,7 +195,7 @@ O fluxo preparado é:
 texto OCR -> parser por regras -> confiança/warnings -> LLM opcional -> validação -> persistência
 ```
 
-Por padrão, a LLM não é chamada. A integração real fica disponível de forma opt-in por variáveis de ambiente. Quando o parser encontra documento ambíguo, a camada de extração sinaliza baixa confiança e recomendação de revisão por IA. Se o arquivo `.env` estiver com `LLM_ENABLED=true` e uma chave configurada em `GROQ_API_KEY` ou `LLM_API_KEY`, o sistema tenta acionar a LLM para obter uma extração estruturada validada.
+Por padrão, a LLM não é chamada. A integração real fica disponível de forma opt-in por variáveis de ambiente. Quando o parser encontra documento ambíguo ou sem status explícito, a camada de extração sinaliza baixa confiança e recomendação de revisão por IA. Se o arquivo `.env` estiver com `LLM_ENABLED=true` e uma chave configurada em `GROQ_API_KEY` ou `LLM_API_KEY`, o sistema tenta acionar a LLM para obter uma extração estruturada validada.
 
 Os campos abaixo ficam disponíveis no retorno de `POST /precatorios/{numero}/processar` e `GET /precatorios/{numero}`:
 
