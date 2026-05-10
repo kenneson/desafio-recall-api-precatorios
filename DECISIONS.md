@@ -109,7 +109,7 @@ Escolhi SQLite para simplificar a execução local do desafio. As tabelas foram 
 - `precatorios`: estado estruturado atual de cada precatório.
 - `coleta_precatorios`: números coletados na ordem cronológica original.
 - `fila_tasks`: tarefas pendentes ou futuras.
-- `timeline_events`: eventos auditáveis extraídos dos documentos ou recebidos por API.
+- `timeline_events`: eventos auditáveis de coleta, extraídos dos documentos ou recebidos por API.
 
 SQLAlchemy foi usado para manter portabilidade para PostgreSQL ou outro banco relacional em uma evolução posterior.
 
@@ -117,7 +117,7 @@ Para a entrega local, o schema é criado diretamente a partir dos modelos SQLAlc
 
 ## Linha do tempo
 
-A timeline combina eventos extraídos do texto original com eventos cadastrados posteriormente pela API. Quando a data não tem precisão completa, o evento registra `ano`, `mes` ou `desconhecida`, evitando apresentar informação estimada como se fosse uma data exata.
+A timeline combina eventos da coleta RPA, eventos extraídos do texto original e eventos cadastrados posteriormente pela API. Quando a coleta retorna CNJ completo, o sistema registra `COLETA_RPA` com origem `rpa` e a posição encontrada na listagem pública. Quando a coleta retorna apenas `Ofício Precatório`, esse identificador permanece em `coleta_precatorios`, sem criar evento de timeline, porque a associação segura com o CNJ completo depende de fonte oficial não mascarada. Quando a data não tem precisão completa, o evento registra `ano`, `mes` ou `desconhecida`, evitando apresentar informação estimada como se fosse uma data exata.
 
 Datas inválidas vindas de OCR, como `31/02/2020`, não interrompem o processamento. O parser ignora a data inválida, registra um aviso em `extraction_warnings` e mantém o restante do documento processável. A decisão evita erro 500 por sujeira de OCR e preserva rastreabilidade para revisão posterior.
 
